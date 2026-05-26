@@ -721,6 +721,12 @@ config REGULATOR_MT6323
 	  This driver supports the control of different power rails of device
 	  through regulator interface.
 
+config REGULATOR_MT6357
+	tristate "MediaTek MT6357 Regulator Support"
+	depends on MFD_MT6397 || COMPILE_TEST
+	help
+	  Say y here to select system regulator support for MediaTek MT6357.
+
 config REGULATOR_MT6358
 	tristate "MediaTek MT6358 PMIC"
 	depends on MFD_MT6397

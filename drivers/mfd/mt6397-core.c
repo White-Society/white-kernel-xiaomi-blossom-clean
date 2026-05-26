@@ -17,6 +17,8 @@
 #include <linux/mfd/mt6323/registers.h>
 #include <linux/mfd/mt6358/registers.h>
 #include <linux/mfd/mt6397/registers.h>
+#include <linux/mfd/mt6357/core.h>
+#include <linux/mfd/mt6357/registers.h>
 
 #define MT6323_RTC_BASE		0x8000
 #define MT6323_RTC_SIZE		0x40
@@ -57,6 +59,52 @@ static const struct resource mt6397_keys_resources[] = {
 
 static const struct resource mt6323_pwrc_resources[] = {
 	DEFINE_RES_MEM(MT6323_PWRC_BASE, MT6323_PWRC_SIZE),
+};
+
+/* 1. Оставляем ТОЛЬКО прерывания оверклокинга/перегрузки регуляторов питания MT6357 */
+static const struct resource mt6357_regulators_resources[] = {
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VPROC_OC, "VPROC"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCORE_OC, "VCORE"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VMODEM_OC, "VMODEM"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VS1_OC, "VS1"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VPA_OC, "VPA"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCORE_PREOC, "VCORE_PR"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VFE28_OC, "VFE28"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VXO22_OC, "VXO22"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VRF18_OC, "VRF18"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VRF12_OC, "VRF12"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VEFUSE_OC, "VEFUSE"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCN33_OC, "VCN33"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCN28_OC, "VCN28"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCN18_OC, "VCN18"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCAMA_OC, "VCAMA"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCAMD_OC, "VCAMD"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VCAMIO_OC, "VCAMIO"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VLDO28_OC, "VLDO28"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VUSB33_OC, "VUSB33"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VAUX18_OC, "VAUX18"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VAUD28_OC, "VAUD28"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VIO28_OC, "VIO28"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VIO18_OC, "VIO18"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VSRAM_PROC_OC, "VSRAM_PROC"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VSRAM_OTHERS_OC, "VSRAM_OTHERS"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VIBR_OC, "VIBR"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VDRAM_OC, "VDRAM"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VMC_OC, "VMC"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VMCH_OC, "VMCH"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VEMC_OC, "VEMC"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VSIM1_OC, "VSIM1"),
+	DEFINE_RES_IRQ_NAMED(MT6357_IRQ_VSIM2_OC, "VSIM2"),
+};
+
+/* 2. Из 20 девайсов оставляем ОДИН-ЕДИНСТВЕННЫЙ, который нам реально нужен */
+static const struct mfd_cell mt6357_devs[] = {
+    {
+        .name = "mt6357-regulator",
+        .of_compatible = "mediatek,mt6357-regulator",
+        .num_resources = ARRAY_SIZE(mt6357_regulators_resources),
+        .resources = mt6357_regulators_resources,
+    },
 };
 
 static const struct mfd_cell mt6323_devs[] = {
@@ -148,6 +196,13 @@ static const struct chip_data mt6358_core = {
 	.cell_size = ARRAY_SIZE(mt6358_devs),
 	.irq_init = mt6358_irq_init,
 };
+static const struct chip_data mt6357_core = {
+    .cid_addr = MT6357_SWCID,
+    .cid_shift = 8,                /* Проверь по старому ядру, 8 или 0, но обычно 8 для сдвига ID */
+    .cells = mt6357_devs,          /* Передаем наш урезанный массив с регулятором */
+    .cell_size = ARRAY_SIZE(mt6357_devs),
+    /* Строку .irq_init пока НЕ пишем, так как у нас нет функции mt6357_irq_init */
+};
 
 static const struct chip_data mt6397_core = {
 	.cid_addr = MT6397_CID,
@@ -159,56 +214,65 @@ static const struct chip_data mt6397_core = {
 
 static int mt6397_probe(struct platform_device *pdev)
 {
-	int ret;
-	unsigned int id = 0;
-	struct mt6397_chip *pmic;
-	const struct chip_data *pmic_core;
+    int ret;
+    unsigned int id = 0;
+    struct mt6397_chip *pmic;
+    const struct chip_data *pmic_core;
 
-	pmic = devm_kzalloc(&pdev->dev, sizeof(*pmic), GFP_KERNEL);
-	if (!pmic)
-		return -ENOMEM;
+    pmic = devm_kzalloc(&pdev->dev, sizeof(*pmic), GFP_KERNEL);
+    if (!pmic)
+        return -ENOMEM;
 
-	pmic->dev = &pdev->dev;
+    pmic->dev = &pdev->dev;
 
-	/*
-	 * mt6397 MFD is child device of soc pmic wrapper.
-	 * Regmap is set from its parent.
-	 */
-	pmic->regmap = dev_get_regmap(pdev->dev.parent, NULL);
-	if (!pmic->regmap)
-		return -ENODEV;
+    /*
+     * mt6397 MFD is child device of soc pmic wrapper.
+     * Regmap is set from its parent.
+     */
+    pmic->regmap = dev_get_regmap(pdev->dev.parent, NULL);
+    if (!pmic->regmap)
+        return -ENODEV;
 
-	pmic_core = of_device_get_match_data(&pdev->dev);
-	if (!pmic_core)
-		return -ENODEV;
+    pmic_core = of_device_get_match_data(&pdev->dev);
+    if (!pmic_core)
+        return -ENODEV;
 
-	ret = regmap_read(pmic->regmap, pmic_core->cid_addr, &id);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to read chip id: %d\n", ret);
-		return ret;
-	}
+    ret = regmap_read(pmic->regmap, pmic_core->cid_addr, &id);
+    if (ret) {
+        dev_err(&pdev->dev, "Failed to read chip id: %d\n", ret);
+        return ret;
+    }
 
-	pmic->chip_id = (id >> pmic_core->cid_shift) & 0xff;
+    pmic->chip_id = (id >> pmic_core->cid_shift) & 0xff;
 
-	platform_set_drvdata(pdev, pmic);
+    platform_set_drvdata(pdev, pmic);
 
-	pmic->irq = platform_get_irq(pdev, 0);
-	if (pmic->irq <= 0)
-		return pmic->irq;
+    pmic->irq = platform_get_irq(pdev, 0);
+    if (pmic->irq <= 0)
+        return pmic->irq;
 
-	ret = pmic_core->irq_init(pmic);
-	if (ret)
-		return ret;
+    /* 1. Разбираемся с прерываниями, если функция указана */
+    if (pmic_core->irq_init) {
+        ret = pmic_core->irq_init(pmic);
+        if (ret)
+            return ret;
+    } else {
+        dev_warn(&pdev->dev, "No IRQ init function specified for this chip\n");
+    }
 
-	ret = devm_mfd_add_devices(&pdev->dev, PLATFORM_DEVID_NONE,
-				   pmic_core->cells, pmic_core->cell_size,
-				   NULL, 0, pmic->irq_domain);
-	if (ret) {
-		irq_domain_remove(pmic->irq_domain);
-		dev_err(&pdev->dev, "failed to add child devices: %d\n", ret);
-	}
+    /* 2. Регистрируем наши регуляторы питания */
+    ret = devm_mfd_add_devices(&pdev->dev, PLATFORM_DEVID_NONE,
+                   pmic_core->cells, pmic_core->cell_size,
+                   NULL, 0, pmic->irq_domain);
+    
+    /* 3. Проверяем, завелись ли суб-девайсы */
+    if (ret) {
+        if (pmic->irq_domain)
+            irq_domain_remove(pmic->irq_domain);
+        dev_err(&pdev->dev, "failed to add child devices: %d\n", ret);
+    }
 
-	return ret;
+    return ret;
 }
 
 static const struct of_device_id mt6397_of_match[] = {
@@ -222,6 +286,8 @@ static const struct of_device_id mt6397_of_match[] = {
 		.compatible = "mediatek,mt6397",
 		.data = &mt6397_core,
 	}, {
+		.compatible = "mediatek,mt6357", 
+		.data = &mt6357_core,
 		/* sentinel */
 	}
 };
