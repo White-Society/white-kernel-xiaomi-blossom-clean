@@ -924,7 +924,7 @@ firmware_class.path=/vendor/firmware";
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&pio>;
-			interrupts = <144 IRQ_TYPE_LEVEL_HIGH 144 0>;
+			interrupts = <144 IRQ_TYPE_LEVEL_HIGH>;
 
 			mtk_battery_oc_throttling {
 				compatible =
