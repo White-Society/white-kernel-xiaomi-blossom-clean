@@ -422,7 +422,7 @@ int sgm41513_exit_hiz_mode(struct sgm41513 *sgm)
 }
 EXPORT_SYMBOL_GPL(sgm41513_exit_hiz_mode);
 
-static int sgm41513_enable_term(struct sgm41513 *sgm, bool enable)
+int sgm41513_enable_term(struct sgm41513 *sgm, bool enable)
 {
     u8 val;
     int ret;
@@ -470,7 +470,7 @@ int sgm41513_set_boost_voltage(struct sgm41513 *sgm, int volt)
 }
 EXPORT_SYMBOL_GPL(sgm41513_set_boost_voltage);
 
-static int sgm41513_set_acovp_threshold(struct sgm41513 *sgm, int volt)
+int sgm41513_set_acovp_threshold(struct sgm41513 *sgm, int volt)
 {
     u8 val;
 
@@ -510,7 +510,7 @@ static int sgm41513_set_int_mask(struct sgm41513 *sgm, int mask)
 }
 
 /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 start */
-static int sgm41513_force_dpdm(struct sgm41513 *sgm)
+int sgm41513_force_dpdm(struct sgm41513 *sgm)
 {
     const u8 val = REG07_FORCE_DPDM << REG07_FORCE_DPDM_SHIFT;
 
@@ -520,7 +520,7 @@ static int sgm41513_force_dpdm(struct sgm41513 *sgm)
 EXPORT_SYMBOL_GPL(sgm41513_force_dpdm);
 /* hs14 code for SR-AL6528A-01-306 by gaozhengwei at 2022/09/06 end */
 
-static int sgm41513_enable_batfet(struct sgm41513 *sgm)
+int sgm41513_enable_batfet(struct sgm41513 *sgm)
 {
     const u8 val = REG07_BATFET_ON << REG07_BATFET_DIS_SHIFT;
 
@@ -529,7 +529,7 @@ static int sgm41513_enable_batfet(struct sgm41513 *sgm)
 }
 EXPORT_SYMBOL_GPL(sgm41513_enable_batfet);
 
-static int sgm41513_disable_batfet(struct sgm41513 *sgm)
+int sgm41513_disable_batfet(struct sgm41513 *sgm)
 {
     const u8 val = REG07_BATFET_OFF << REG07_BATFET_DIS_SHIFT;
 
@@ -538,7 +538,7 @@ static int sgm41513_disable_batfet(struct sgm41513 *sgm)
 }
 EXPORT_SYMBOL_GPL(sgm41513_disable_batfet);
 
-static int sgm41513_set_batfet_delay(struct sgm41513 *sgm, uint8_t delay)
+int sgm41513_set_batfet_delay(struct sgm41513 *sgm, uint8_t delay)
 {
     u8 val;
 
@@ -554,7 +554,7 @@ static int sgm41513_set_batfet_delay(struct sgm41513 *sgm, uint8_t delay)
 }
 EXPORT_SYMBOL_GPL(sgm41513_set_batfet_delay);
 
-static int sgm41513_enable_safety_timer(struct sgm41513 *sgm)
+int sgm41513_enable_safety_timer(struct sgm41513 *sgm)
 {
     const u8 val = REG05_CHG_TIMER_ENABLE << REG05_EN_TIMER_SHIFT;
 
@@ -563,7 +563,7 @@ static int sgm41513_enable_safety_timer(struct sgm41513 *sgm)
 }
 EXPORT_SYMBOL_GPL(sgm41513_enable_safety_timer);
 
-static int sgm41513_disable_safety_timer(struct sgm41513 *sgm)
+int sgm41513_disable_safety_timer(struct sgm41513 *sgm)
 {
     const u8 val = REG05_CHG_TIMER_DISABLE << REG05_EN_TIMER_SHIFT;
 
