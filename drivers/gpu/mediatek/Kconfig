@@ -1,0 +1,11 @@
+config MEDIATEK_GPU
+	bool "MediaTek PowerVR Rogue GPU support"
+	depends on ARM64
+	default y
+	help
+	  Enable support for MediaTek PowerVR Rogue GPU (MT6765 / GE8320).
+
+config MTK_GPU_SUPPORT_MT6765
+	bool "MT6765 GPU support"
+	depends on MEDIATEK_GPU
+	default y
