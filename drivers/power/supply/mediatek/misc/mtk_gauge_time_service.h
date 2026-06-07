@@ -6,10 +6,6 @@
 #ifndef __MTK_GAUGE_TIME_SERVICE_INTF_H__
 #define __MTK_GAUGE_TIME_SERVICE_INTF_H__
 
-#include <linux/device.h>
-#include <linux/list.h>
-#include <linux/time.h>
-
 struct gtimer {
 	char *name;
 	struct device *dev;

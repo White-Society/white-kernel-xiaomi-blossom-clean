@@ -98,5 +98,28 @@ obj-$(CONFIG_CHARGER_BD70528)	+= bd70528-charger.o
 obj-$(CONFIG_CHARGER_BD99954)	+= bd99954-charger.o
 obj-$(CONFIG_CHARGER_WILCO)	+= wilco-charger.o
 obj-$(CONFIG_RN5T618_POWER)	+= rn5t618_power.o
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/usb20
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/typec/tcpc/inc
+# MTK charger framework
 obj-y += charger_class.o
+obj-y += adapter_class.o
+obj-y += mtk_basic_charger.o
+obj-y += mtk_charger.o
+obj-y += mtk_charger_algorithm_class.o
+obj-y += mtk_charger_intf.o
+obj-y += mtk_pulse_charger.o
+
+# MTK PE (PumpExpress)
+obj-y += mtk_pe.o mtk_pe_hal.o
+obj-y += mtk_pe2.o mtk_pe2_hal.o
+obj-y += mtk_pe4.o mtk_pe4_hal.o
+
+# MTK PD
+obj-y += mtk_pd_adapter.o mtk_pd.o mtk_pd_hal.o
+
+# MTK battery / gauge
+obj-y += mt6357-charger-type.o
+mt6357_battery-objs := mtk_battery_coulomb_service.o mtk_battery.o mtk_battery_algo.o mt6357-gauge.o mtk_battery_daemon.o
+obj-y += mt6357_battery.o
+
 obj-y += mediatek/

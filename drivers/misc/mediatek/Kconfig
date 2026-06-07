@@ -1,0 +1,13 @@
+config MACH_MT6765
+    bool "MediaTek MT6765"
+    default n
+
+config USB_MTK_HDRC
+    tristate "MediaTek MUSB support"
+    default n
+
+config MTK_PLATFORM
+    string "MTK platform name"
+    default "mt6765"
+
+source "drivers/misc/mediatek/usb20/Kconfig"

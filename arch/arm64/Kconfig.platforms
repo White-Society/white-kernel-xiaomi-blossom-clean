@@ -322,4 +322,9 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config MACH_MT6765
+	bool "MediaTek MT6765"
+	default n
+	help
+	  This enables support for MediaTek MT6765 SoC.
 endmenu
