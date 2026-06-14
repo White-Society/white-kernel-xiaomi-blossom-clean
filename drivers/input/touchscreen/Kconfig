@@ -16,6 +16,18 @@ config TOUCHSCREEN_PROPERTIES
 	def_tristate INPUT
 	depends on INPUT
 
+config TOUCHSCREEN_MTK
+    bool "MediaTek Touch Panel Driver"
+    help
+      Say Y here if you have MediaTek touch panel.
+
+config TOUCHSCREEN_COMMON
+    bool "touchscreen for xiaomi C3L project"
+    depends on SPI
+    default n
+    help
+      Say Y here if you have a Xiaomi C3L touchscreen.
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X
@@ -1335,4 +1347,5 @@ config TOUCHSCREEN_ZINITIX
 	  To compile this driver as a module, choose M here: the
 	  module will be called zinitix.
 
+source "drivers/input/touchscreen/nt36xxx_spi/Kconfig"
 endif

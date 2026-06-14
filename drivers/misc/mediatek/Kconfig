@@ -11,3 +11,26 @@ config MTK_PLATFORM
     default "mt6765"
 
 source "drivers/misc/mediatek/usb20/Kconfig"
+
+source "drivers/misc/mediatek/video/Kconfig"
+
+source "drivers/misc/mediatek/cmdq/Kconfig"
+
+source "drivers/misc/mediatek/ext_disp/Kconfig"
+
+source "drivers/misc/mediatek/sync/Kconfig"
+source "drivers/misc/mediatek/m4u/Kconfig"
+
+config MTK_LCM
+    bool "MediaTek LCM support"
+    default n
+    help
+      Enable MediaTek LCM (LCD Module) driver support.
+
+config MMPROFILE
+    bool "MediaTek MM Profile support"
+    default n
+
+config CUSTOM_KERNEL_LCM
+    string "Custom kernel LCM list"
+    default ""

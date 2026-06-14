@@ -7,6 +7,10 @@
 
 wm97xx-ts-y := wm97xx-core.o
 
+obj-$(CONFIG_TOUCHSCREEN_MTK)		+= tpd_control.o tpd_button.o tpd_debug.o tpd_default.o tpd_misc.o tpd_setting.o
+obj-$(CONFIG_TOUCHSCREEN_COMMON)	+= lct_tp_info.o lct_tp_selftest.o lct_tp_gesture.o lct_tp_grip_area.o lct_tp_work.o
+obj-$(CONFIG_TOUCHSCREEN_NT36XXX_HOSTDL_SPI)	+= nt36xxx_spi/
+
 obj-$(CONFIG_TOUCHSCREEN_PROPERTIES)	+= of_touchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o

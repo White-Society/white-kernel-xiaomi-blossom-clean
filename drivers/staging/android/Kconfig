@@ -25,6 +25,22 @@ config DEBUG_KINFO
 	   - UTS_RELEASE
 	   - BUILD_INFO(ro.build.fingerprint)
 
+config MTK_ION
+    bool "MediaTek ION driver"
+    default n
+    help
+      MediaTek ION driver support for multimedia memory allocation.
+
+config MTK_ION_DEBUG
+    bool "MediaTek ION debug support"
+    depends on MTK_ION
+    default n
+
+config MTK_ION_SEC_HEAP
+    bool "MediaTek ION secure heap"
+    depends on MTK_ION
+    default n
+
 source "drivers/staging/android/ion/Kconfig"
 
 endif # if ANDROID

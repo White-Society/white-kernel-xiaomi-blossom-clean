@@ -1,2 +1,10 @@
 obj-y += typec/
 obj-y += usb20/
+obj-y += video/
+obj-y += mmp/
+obj-y += lcm/
+obj-y += cmdq/
+obj-$(CONFIG_MTK_CMDQ) += mdp/
+obj-$(CONFIG_MTK_LCM) += ext_disp/
+obj-$(CONFIG_MTK_SYNC) += sync/
+obj-$(CONFIG_MTK_M4U) += m4u/
