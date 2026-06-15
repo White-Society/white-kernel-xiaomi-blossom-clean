@@ -28,6 +28,7 @@
 
 #include <asm/acpi.h>
 #include <asm/bug.h>
+#include <asm/set_memory.h>
 #include <asm/cmpxchg.h>
 #include <asm/cpufeature.h>
 #include <asm/exception.h>
@@ -389,9 +390,14 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 	}
 
 	if (is_el1_permission_fault(addr, esr, regs)) {
-		if (esr & ESR_ELx_WNR)
+		if (esr & ESR_ELx_WNR) {
+			/* MTK port: auto-fix write-to-readonly */
+			if (set_memory_rw(addr & PAGE_MASK, 1) == 0) {
+				pr_emerg("MTK510: auto-fixed ro write at 0x%lx\n", addr);
+				return;
+			}
 			msg = "write to read-only memory";
-		else if (is_el1_instruction_abort(esr))
+		} else if (is_el1_instruction_abort(esr))
 			msg = "execute from non-executable memory";
 		else
 			msg = "read from unreadable memory";

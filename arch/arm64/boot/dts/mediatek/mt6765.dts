@@ -30,7 +30,7 @@
 page_owner=on \
 swiotlb=noforce androidboot.hardware=mt6765 \
 maxcpus=8 \
-firmware_class.path=/vendor/firmware";
+firmware_class.path=/vendor/firmware rodata=off";
 		kaslr-seed = <0 0>;
 	};
 
@@ -924,7 +924,7 @@ firmware_class.path=/vendor/firmware";
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupt-parent = <&pio>;
-			interrupts = <144 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <144 IRQ_TYPE_LEVEL_HIGH 144 0>;
 
 			mtk_battery_oc_throttling {
 				compatible =

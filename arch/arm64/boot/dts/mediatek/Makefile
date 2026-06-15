@@ -14,3 +14,5 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += mt8183-evb.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8183-kukui-krane-sku176.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8516-pumpkin.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt6765.dtb
+dtb-$(CONFIG_ARCH_MEDIATEK) += dandelion.dtb# MTK DTS includes generated/autoconf.h - need the include path
+DTC_FLAGS_mt6765 += -i $(objtree)/include/generated

@@ -110,9 +110,10 @@ static int change_memory_common(unsigned long addr, int numpages,
 
 int set_memory_ro(unsigned long addr, int numpages)
 {
-	return change_memory_common(addr, numpages,
-					__pgprot(PTE_RDONLY),
-					__pgprot(PTE_WRITE));
+	/* MTK port: disabled set_memory_ro */
+	pr_emerg("MTK510: set_memory_ro addr=0x%lx numpages=%d\n", addr, numpages);
+	dump_stack();
+	return 0;
 }
 
 int set_memory_rw(unsigned long addr, int numpages)

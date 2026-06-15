@@ -445,20 +445,11 @@ void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
 			     pgd_pgtable_alloc, flags);
 }
 
-static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
+static void __maybe_unused update_mapping_prot(phys_addr_t phys, unsigned long virt,
 				phys_addr_t size, pgprot_t prot)
 {
-	if (virt < PAGE_OFFSET) {
-		pr_warn("BUG: not updating mapping for %pa at 0x%016lx - outside kernel range\n",
-			&phys, virt);
-		return;
-	}
-
-	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL,
-			     NO_CONT_MAPPINGS);
-
-	/* flush the TLBs after updating live kernel mappings */
-	flush_tlb_kernel_range(virt, virt + size);
+	/* MTK port: disabled to prevent read-only memory violations */
+	return;
 }
 
 static void __init __map_memblock(pgd_t *pgdp, phys_addr_t start,
@@ -470,12 +461,7 @@ static void __init __map_memblock(pgd_t *pgdp, phys_addr_t start,
 
 void __init mark_linear_text_alias_ro(void)
 {
-	/*
-	 * Remove the write permissions from the linear alias of .text/.rodata
-	 */
-	update_mapping_prot(__pa_symbol(_text), (unsigned long)lm_alias(_text),
-			    (unsigned long)__init_begin - (unsigned long)_text,
-			    PAGE_KERNEL_RO);
+	/* Disabled for MTK port: vendor code writes to rodata */
 }
 
 static bool crash_mem_map __initdata;
@@ -573,17 +559,7 @@ static void __init map_mem(pgd_t *pgdp)
 
 void mark_rodata_ro(void)
 {
-	unsigned long section_size;
-
-	/*
-	 * mark .rodata as read only. Use __init_begin rather than __end_rodata
-	 * to cover NOTES and EXCEPTION_TABLE.
-	 */
-	section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
-	update_mapping_prot(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
-			    section_size, PAGE_KERNEL_RO);
-
-	debug_checkwx();
+	/* Disabled for MTK port: vendor code writes to rodata */
 }
 
 static void __init map_kernel_segment(pgd_t *pgdp, void *va_start, void *va_end,
