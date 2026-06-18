@@ -48,7 +48,10 @@ EXPORT_SYMBOL(vabits_actual);
 
 u64 kimage_voffset __ro_after_init;
 EXPORT_SYMBOL(kimage_voffset);
-
+/* MTK port: rodata_enabled is not declared in init/main.c when
+ * STRICT_KERNEL_RWX=n. Declare it here, force false to disable
+ * all rodata protection and allow runtime kernel text patching. */
+extern bool rodata_enabled __ro_after_init;
 /*
  * Empty_zero_page is a special page that is used for zero-initialized data
  * and COW.
@@ -481,79 +484,69 @@ early_param("crashkernel", enable_crash_mem_map);
 
 static void __init map_mem(pgd_t *pgdp)
 {
-	phys_addr_t kernel_start = __pa_symbol(_text);
-	phys_addr_t kernel_end = __pa_symbol(__init_begin);
-	phys_addr_t start, end;
-	int flags = 0;
-	u64 i;
+    phys_addr_t kernel_start = __pa_symbol(_text);
+    phys_addr_t kernel_end = __pa_symbol(__init_begin);
+    phys_addr_t start, end;
+    int flags = 0;
+    u64 i;
 
-	if (rodata_full || debug_pagealloc_enabled() ||
-	    IS_ENABLED(CONFIG_KFENCE))
-		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
+    if (rodata_full || debug_pagealloc_enabled() ||
+        IS_ENABLED(CONFIG_KFENCE))
+        flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
 
-	/*
-	 * Take care not to create a writable alias for the
-	 * read-only text and rodata sections of the kernel image.
-	 * So temporarily mark them as NOMAP to skip mappings in
-	 * the following for-loop
-	 */
-	memblock_mark_nomap(kernel_start, kernel_end - kernel_start);
+    /*
+     * Take care not to create a writable alias for the
+     * read-only text and rodata sections of the kernel image.
+     * So temporarily mark them as NOMAP to skip mappings in
+     * the following for-loop
+     */
+    memblock_mark_nomap(kernel_start, kernel_end - kernel_start);
 
 #ifdef CONFIG_KEXEC_CORE
-	if (crash_mem_map) {
-		if (IS_ENABLED(CONFIG_ZONE_DMA) ||
-		    IS_ENABLED(CONFIG_ZONE_DMA32))
-			flags |= NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
-		else if (crashk_res.end)
-			memblock_mark_nomap(crashk_res.start,
-					    resource_size(&crashk_res));
-	}
+    if (crash_mem_map) {
+        if (IS_ENABLED(CONFIG_ZONE_DMA) ||
+            IS_ENABLED(CONFIG_ZONE_DMA32))
+            flags |= NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
+        else if (crashk_res.end)
+            memblock_mark_nomap(crashk_res.start,
+                        resource_size(&crashk_res));
+    }
 #endif
 
-	/* map all the memory banks */
-	for_each_mem_range(i, &start, &end) {
-		if (start >= end)
-			break;
-		/*
-		 * The linear map must allow allocation tags reading/writing
-		 * if MTE is present. Otherwise, it has the same attributes as
-		 * PAGE_KERNEL.
-		 */
-		__map_memblock(pgdp, start, end, pgprot_tagged(PAGE_KERNEL),
-			       flags);
-	}
+    /* map all the memory banks */
+    for_each_mem_range(i, &start, &end) {
+        if (start >= end)
+            break;
+        __map_memblock(pgdp, start, end, pgprot_tagged(PAGE_KERNEL),
+                   flags);
+    }
 
-	/*
-	 * Map the linear alias of the [_text, __init_begin) interval
-	 * as non-executable now, and remove the write permission in
-	 * mark_linear_text_alias_ro() below (which will be called after
-	 * alternative patching has completed). This makes the contents
-	 * of the region accessible to subsystems such as hibernate,
-	 * but protects it from inadvertent modification or execution.
-	 * Note that contiguous mappings cannot be remapped in this way,
-	 * so we should avoid them here.
-	 */
-	__map_memblock(pgdp, kernel_start, kernel_end,
-		       PAGE_KERNEL, NO_CONT_MAPPINGS);
-	memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
+    /*
+     * MTK port: Map the linear alias of the [_text, __init_begin) interval
+     * with PAGE_KERNEL_EXEC (RW+X) to allow apply_alternatives() and
+     * other runtime patchers to write through lm_alias() without panic.
+     * Original used PAGE_KERNEL (RW+NX), but something downstream was
+     * converting it to PAGE_KERNEL_RO, breaking boot.
+     */
+    __map_memblock(pgdp, kernel_start, kernel_end,
+               PAGE_KERNEL_EXEC, NO_CONT_MAPPINGS);
+	pr_emerg("XXX: map_mem kernel linear alias mapped PAGE_KERNEL_EXEC\n");
+    pr_emerg("XXX: map_mem kernel_start=0x%llx kernel_end=0x%llx\n",
+            kernel_start, kernel_end);
+    memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
 
-	/*
-	 * Use page-level mappings here so that we can shrink the region
-	 * in page granularity and put back unused memory to buddy system
-	 * through /sys/kernel/kexec_crash_size interface.
-	 */
 #ifdef CONFIG_KEXEC_CORE
-	if (crash_mem_map &&
-	    !IS_ENABLED(CONFIG_ZONE_DMA) && !IS_ENABLED(CONFIG_ZONE_DMA32)) {
-		if (crashk_res.end) {
-			__map_memblock(pgdp, crashk_res.start,
-				       crashk_res.end + 1,
-				       PAGE_KERNEL,
-				       NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS);
-			memblock_clear_nomap(crashk_res.start,
-					     resource_size(&crashk_res));
-		}
-	}
+    if (crash_mem_map &&
+        !IS_ENABLED(CONFIG_ZONE_DMA) && !IS_ENABLED(CONFIG_ZONE_DMA32)) {
+        if (crashk_res.end) {
+            __map_memblock(pgdp, crashk_res.start,
+                       crashk_res.end + 1,
+                       PAGE_KERNEL,
+                       NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS);
+            memblock_clear_nomap(crashk_res.start,
+                         resource_size(&crashk_res));
+        }
+    }
 #endif
 }
 
@@ -661,67 +654,49 @@ static bool arm64_early_this_cpu_has_bti(void)
  */
 static void __init map_kernel(pgd_t *pgdp)
 {
-	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
-				vmlinux_initdata, vmlinux_data;
+    static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
+                vmlinux_initdata, vmlinux_data;
 
-	/*
-	 * External debuggers may need to write directly to the text
-	 * mapping to install SW breakpoints. Allow this (only) when
-	 * explicitly requested with rodata=off.
-	 */
-	pgprot_t text_prot = rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
+    /* MTK port: AGGRESSIVELY force RW+X for ALL kernel image segments
+     * to allow runtime patching from apply_alternatives, jump_label, etc. */
+    pgprot_t text_prot = PAGE_KERNEL_EXEC;
+    pgprot_t rodata_prot = PAGE_KERNEL_EXEC;
+    pgprot_t inittext_prot = PAGE_KERNEL_EXEC;
+	pr_emerg("XXX: map_kernel text_prot=0x%llx\n", pgprot_val(text_prot));
+    pr_emerg("XXX: map_kernel _text=0x%lx _etext=0x%lx\n", 
+             (unsigned long)_text, (unsigned long)_etext);
 
-	/*
-	 * If we have a CPU that supports BTI and a kernel built for
-	 * BTI then mark the kernel executable text as guarded pages
-	 * now so we don't have to rewrite the page tables later.
-	 */
-	if (arm64_early_this_cpu_has_bti())
-		text_prot = __pgprot_modify(text_prot, PTE_GP, PTE_GP);
+    if (arm64_early_this_cpu_has_bti())
+        text_prot = __pgprot_modify(text_prot, PTE_GP, PTE_GP);
 
-	/*
-	 * Only rodata will be remapped with different permissions later on,
-	 * all other segments are allowed to use contiguous mappings.
-	 */
-	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
-			   VM_NO_GUARD);
-	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
-			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
-	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
-			   &vmlinux_inittext, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
-			   &vmlinux_initdata, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
+    map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
+               VM_NO_GUARD);
+    map_kernel_segment(pgdp, __start_rodata, __inittext_begin, rodata_prot,
+               &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
+    map_kernel_segment(pgdp, __inittext_begin, __inittext_end, inittext_prot,
+               &vmlinux_inittext, 0, VM_NO_GUARD);
+    map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
+               &vmlinux_initdata, 0, VM_NO_GUARD);
+    map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
 
-	if (!READ_ONCE(pgd_val(*pgd_offset_pgd(pgdp, FIXADDR_START)))) {
-		/*
-		 * The fixmap falls in a separate pgd to the kernel, and doesn't
-		 * live in the carveout for the swapper_pg_dir. We can simply
-		 * re-use the existing dir for the fixmap.
-		 */
-		set_pgd(pgd_offset_pgd(pgdp, FIXADDR_START),
-			READ_ONCE(*pgd_offset_k(FIXADDR_START)));
-	} else if (CONFIG_PGTABLE_LEVELS > 3) {
-		pgd_t *bm_pgdp;
-		p4d_t *bm_p4dp;
-		pud_t *bm_pudp;
-		/*
-		 * The fixmap shares its top level pgd entry with the kernel
-		 * mapping. This can really only occur when we are running
-		 * with 16k/4 levels, so we can simply reuse the pud level
-		 * entry instead.
-		 */
-		BUG_ON(!IS_ENABLED(CONFIG_ARM64_16K_PAGES));
-		bm_pgdp = pgd_offset_pgd(pgdp, FIXADDR_START);
-		bm_p4dp = p4d_offset(bm_pgdp, FIXADDR_START);
-		bm_pudp = pud_set_fixmap_offset(bm_p4dp, FIXADDR_START);
-		pud_populate(&init_mm, bm_pudp, lm_alias(bm_pmd));
-		pud_clear_fixmap();
-	} else {
-		BUG();
-	}
+    if (!READ_ONCE(pgd_val(*pgd_offset_pgd(pgdp, FIXADDR_START)))) {
+        set_pgd(pgd_offset_pgd(pgdp, FIXADDR_START),
+            READ_ONCE(*pgd_offset_k(FIXADDR_START)));
+    } else if (CONFIG_PGTABLE_LEVELS > 3) {
+        pgd_t *bm_pgdp;
+        p4d_t *bm_p4dp;
+        pud_t *bm_pudp;
+        BUG_ON(!IS_ENABLED(CONFIG_ARM64_16K_PAGES));
+        bm_pgdp = pgd_offset_pgd(pgdp, FIXADDR_START);
+        bm_p4dp = p4d_offset(bm_pgdp, FIXADDR_START);
+        bm_pudp = pud_set_fixmap_offset(bm_p4dp, FIXADDR_START);
+        pud_populate(&init_mm, bm_pudp, lm_alias(bm_pmd));
+        pud_clear_fixmap();
+    } else {
+        BUG();
+    }
 
-	kasan_copy_shadow(pgdp);
+    kasan_copy_shadow(pgdp);
 }
 
 void __init paging_init(void)

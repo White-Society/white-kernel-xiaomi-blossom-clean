@@ -30,8 +30,8 @@ config ARM64
 	select ARCH_HAS_SET_DIRECT_MAP
 	select ARCH_HAS_SET_MEMORY
 	select ARCH_STACKWALK
-	select ARCH_HAS_STRICT_KERNEL_RWX
-	select ARCH_HAS_STRICT_MODULE_RWX
+	# select ARCH_HAS_STRICT_KERNEL_RWX
+	# select ARCH_HAS_STRICT_MODULE_RWX
 	select ARCH_HAS_SYNC_DMA_FOR_DEVICE
 	select ARCH_HAS_SYNC_DMA_FOR_CPU
 	select ARCH_HAS_SYSCALL_WRAPPER
@@ -732,7 +732,7 @@ config ARM64_ERRATUM_2067961
 config ARM64_ERRATUM_2454944
 	bool "Cortex-A510: 2454944: Unmodified cache line might be written back to memory"
 	select ARCH_HAS_TEARDOWN_DMA_OPS
-	select RODATA_FULL_DEFAULT_ENABLED
+	# select RODATA_FULL_DEFAULT_ENABLED
 	help
 	  This option adds the workaround for ARM Cortex-A510 erratum 2454944.
 
@@ -1351,7 +1351,7 @@ config MITIGATE_SPECTRE_BRANCH_HISTORY
 
 config RODATA_FULL_DEFAULT_ENABLED
 	bool "Apply r/o permissions of VM areas also to their linear aliases"
-	default y
+	default n
 	help
 	  Apply read-only attributes of VM areas to the linear alias of
 	  the backing pages as well. This prevents code or read-only data

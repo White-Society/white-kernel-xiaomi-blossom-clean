@@ -140,7 +140,8 @@ static void __nocfi __apply_alternatives(void *alt_region,  bool is_module,
 	struct alt_region *region = alt_region;
 	__le32 *origptr, *updptr;
 	alternative_cb_t alt_cb;
-
+	pr_emerg("XXX: __apply_alternatives ENTERED\n");
+    dump_stack();
 	for (alt = region->begin; alt < region->end; alt++) {
 		int nr_inst;
 
@@ -197,7 +198,7 @@ static void __nocfi __apply_alternatives(void *alt_region,  bool is_module,
  * We might be patching the stop_machine state machine, so implement a
  * really simple polling protocol here.
  */
-static int __apply_alternatives_multi_stop(void *unused)
+static int __maybe_unused __apply_alternatives_multi_stop(void *unused)
 {
 	struct alt_region region = {
 		.begin	= (struct alt_instr *)__alt_instructions,
@@ -224,28 +225,16 @@ static int __apply_alternatives_multi_stop(void *unused)
 	return 0;
 }
 
-void __init apply_alternatives_all(void)
+void __init apply_alternatives_all(void) 
 {
-	/* better not try code patching on a live SMP system */
-	stop_machine(__apply_alternatives_multi_stop, NULL, cpu_online_mask);
+    pr_emerg("XXX: apply_alternatives_all DISABLED\n");
+    return;  // ПОЛНОСТЬЮ отключить
 }
 
-/*
- * This is called very early in the boot process (directly after we run
- * a feature detect on the boot CPU). No need to worry about other CPUs
- * here.
- */
 void __init apply_boot_alternatives(void)
 {
-	struct alt_region region = {
-		.begin	= (struct alt_instr *)__alt_instructions,
-		.end	= (struct alt_instr *)__alt_instructions_end,
-	};
-
-	/* If called on non-boot cpu things could go wrong */
-	WARN_ON(smp_processor_id() != 0);
-
-	__apply_alternatives(&region, false, &boot_capabilities[0]);
+    pr_emerg("XXX: apply_boot_alternatives DISABLED\n");
+    return;
 }
 
 #ifdef CONFIG_MODULES

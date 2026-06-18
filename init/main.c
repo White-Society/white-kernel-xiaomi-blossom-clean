@@ -857,7 +857,8 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 {
 	char *command_line;
 	char *after_dashes;
-
+	/* MTK DEBUG: verify build is fresh */
+    pr_emerg("XXX: START_KERNEL_DANDELION_BUILD_002\n");
 	set_task_stack_end_magic(&init_task);
 	smp_setup_processor_id();
 	debug_objects_early_init();
@@ -1360,8 +1361,8 @@ static int try_to_run_init_process(const char *init_filename)
 
 static noinline void __init kernel_init_freeable(void);
 
-#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
 bool rodata_enabled __ro_after_init = false;
+#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
 static int __init set_debug_rodata(char *str)
 {
 	if (strtobool(str, &rodata_enabled))

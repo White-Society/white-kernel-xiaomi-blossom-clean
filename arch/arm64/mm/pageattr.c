@@ -17,20 +17,31 @@ struct page_change_data {
 	pgprot_t clear_mask;
 };
 
-bool rodata_full __ro_after_init = IS_ENABLED(CONFIG_RODATA_FULL_DEFAULT_ENABLED);
-
+/* MTK port: force disable rodata_full — vendor code patches kernel text */
+bool rodata_full __ro_after_init = false;
 static int change_page_range(pte_t *ptep, unsigned long addr, void *data)
 {
-	struct page_change_data *cdata = data;
-	pte_t pte = READ_ONCE(*ptep);
-
-	pte = clear_pte_bit(pte, cdata->clear_mask);
-	pte = set_pte_bit(pte, cdata->set_mask);
-
-	set_pte(ptep, pte);
-	return 0;
+    struct page_change_data *cdata = data;
+    pte_t pte = READ_ONCE(*ptep);
+    
+    /* MTK DEBUG: log who sets RO on kernel text addresses */
+    if (pgprot_val(cdata->set_mask) & PTE_RDONLY) {
+        if (addr >= (unsigned long)_text && addr < (unsigned long)_end) {
+            pr_emerg("XXX: RO set on kernel addr=0x%lx\n", addr);
+            dump_stack();
+        }
+        if (addr >= (unsigned long)lm_alias(_text) && 
+            addr < (unsigned long)lm_alias(_end)) {
+            pr_emerg("XXX: RO set on linear alias addr=0x%lx\n", addr);
+            dump_stack();
+        }
+    }
+    
+    pte = clear_pte_bit(pte, cdata->clear_mask);
+    pte = set_pte_bit(pte, cdata->set_mask);
+    set_pte(ptep, pte);
+    return 0;
 }
-
 /*
  * This function assumes that the range is mapped with PAGE_SIZE pages.
  */
@@ -118,9 +129,27 @@ int set_memory_ro(unsigned long addr, int numpages)
 
 int set_memory_rw(unsigned long addr, int numpages)
 {
-	return change_memory_common(addr, numpages,
-					__pgprot(PTE_WRITE),
-					__pgprot(PTE_RDONLY));
+    unsigned long start = addr & PAGE_MASK;
+    unsigned long size = PAGE_SIZE * numpages;
+    int ret;
+
+    pr_emerg("MTK510: set_memory_rw addr=0x%lx numpages=%d\n", addr, numpages);
+
+    /* MTK port: directly modify PTE bypassing the vmalloc check in
+     * change_memory_common(). This handles kernel text/rodata writes
+     * from apply_alternatives(), jump_label_init(), ftrace, etc.
+     */
+    ret = __change_memory_common(start, size,
+                                  __pgprot(PTE_WRITE),
+                                  __pgprot(PTE_RDONLY));
+    if (ret) {
+        pr_emerg("MTK510: direct rw-fix FAILED addr=0x%lx ret=%d, fallback\n",
+                 start, ret);
+        return change_memory_common(addr, numpages,
+                        __pgprot(PTE_WRITE),
+                        __pgprot(PTE_RDONLY));
+    }
+    return 0;
 }
 
 int set_memory_nx(unsigned long addr, int numpages)

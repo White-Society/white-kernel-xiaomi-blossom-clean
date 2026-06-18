@@ -396,6 +396,8 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 				pr_emerg("MTK510: auto-fixed ro write at 0x%lx\n", addr);
 				return;
 			}
+			pr_emerg("XXX: RO write fault at 0x%lx, PC=0x%llx\n", addr, regs->pc);
+			dump_stack();
 			msg = "write to read-only memory";
 		} else if (is_el1_instruction_abort(esr))
 			msg = "execute from non-executable memory";
