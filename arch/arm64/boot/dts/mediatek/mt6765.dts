@@ -486,6 +486,17 @@ firmware_class.path=/vendor/firmware rodata=off";
 		#size-cells = <2>;
 		ranges;
 
+		/* MTK DEBUG: additional ramoops with larger record_size */
+        ramoops_debug: ramoops@46000000 {
+            compatible = "ramoops";
+            reg = <0 0x46000000 0 0x100000>;
+            record-size = <0x20000>;
+            console-size = <0x20000>;
+            ftrace-size = <0x0>;
+            pmsg-size = <0x20000>;
+            ecc-size = <0x10>;
+        };
+		
 		reserve-memory-sspm_share {
 			compatible = "mediatek,reserve-memory-sspm_share";
 			no-map;
@@ -3872,26 +3883,10 @@ firmware_class.path=/vendor/firmware rodata=off";
 		required-opps = <&dvfsrc_freq_opp0>,
 				<&dvfsrc_freq_opp1>;
 	};
-	/ {
-    	reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
-
-        /* MTK DEBUG: additional ramoops region for full dmesg capture */
-        ramoops_debug: ramoops@46000000 {
-            compatible = "ramoops";
-            reg = <0 0x46000000 0 0x100000>;
-            record-size = <0x20000>;
-            console-size = <0x20000>;
-            ftrace-size = <0x0>;
-            pmsg-size = <0x20000>;
-            ecc-size = <0x10>;
-        };
-    };
+	
 };
 
-};
+
 
 #include "mediatek/cust_mt6765_msdc.dtsi"
 #include "mediatek/mt6357.dtsi"
