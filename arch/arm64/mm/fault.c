@@ -291,7 +291,7 @@ static void die_kernel_fault(const char *msg, unsigned long addr,
 {
 	bust_spinlocks(1);
 
-	pr_alert("Unable to handle kernel %s at virtual address %016lx\n", msg,
+	pr_alert("MTK510_KERNEL_FAULT Unable to handle kernel %s at virtual address %016lx\n", msg,
 		 addr);
 
 	trace_android_rvh_die_kernel_fault(regs, esr, addr, msg);
@@ -368,52 +368,75 @@ static bool is_translation_fault(unsigned long esr)
 }
 
 static void __do_kernel_fault(unsigned long addr, unsigned int esr,
-			      struct pt_regs *regs)
+                  struct pt_regs *regs)
 {
-	const char *msg;
+    const char *msg;
+    /* MTK DEBUG: dump everything BEFORE die_kernel_fault — bust_spinlocks
+     * in die_kernel_fault will force this to console-ramoops! */
+    pr_alert("XXX: ========================================\n");
+    pr_alert("XXX: KERNEL FAULT addr=0x%lx ESR=0x%x\n", addr, esr);
+    pr_alert("XXX: PC=0x%llx SP=0x%llx PSTATE=0x%llx\n",
+         regs->pc, regs->sp, regs->pstate);
+    pr_alert("XXX: LR=0x%llx current=%s pid=%d\n",
+         regs->regs[30], current->comm, current->pid);
+    pr_alert("XXX: x0=0x%llx x1=0x%llx x2=0x%llx x3=0x%llx\n",
+         regs->regs[0], regs->regs[1], regs->regs[2], regs->regs[3]);
+    pr_alert("XXX: x4=0x%llx x5=0x%llx x6=0x%llx x7=0x%llx\n",
+         regs->regs[4], regs->regs[5], regs->regs[6], regs->regs[7]);
+    pr_alert("XXX: x8=0x%llx x9=0x%llx x10=0x%llx x11=0x%llx\n",
+         regs->regs[8], regs->regs[9], regs->regs[10], regs->regs[11]);
+    pr_alert("XXX: x12=0x%llx x13=0x%llx x14=0x%llx x15=0x%llx\n",
+         regs->regs[12], regs->regs[13], regs->regs[14], regs->regs[15]);
+    pr_alert("XXX: x16=0x%llx x17=0x%llx x18=0x%llx x19=0x%llx\n",
+         regs->regs[16], regs->regs[17], regs->regs[18], regs->regs[19]);
+    pr_alert("XXX: x20=0x%llx x21=0x%llx x22=0x%llx x23=0x%llx\n",
+         regs->regs[20], regs->regs[21], regs->regs[22], regs->regs[23]);
+    pr_alert("XXX: x24=0x%llx x25=0x%llx x26=0x%llx x27=0x%llx\n",
+         regs->regs[24], regs->regs[25], regs->regs[26], regs->regs[27]);
+    pr_alert("XXX: x28=0x%llx x29=0x%llx\n",
+         regs->regs[28], regs->regs[29]);
+    pr_alert("XXX: === CALL TRACE ===\n");
+    show_regs(regs);
+    pr_alert("XXX: === END DEBUG DUMP ===\n");
 
-	/*
-	 * Are we prepared to handle this kernel fault?
-	 * We are almost certainly not prepared to handle instruction faults.
-	 */
-	if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
-		return;
+    /*
+     * Are we prepared to handle this kernel fault?
+     * We are almost certainly not prepared to handle instruction faults.
+     */
+    if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
+        return;
 
-	if (WARN_RATELIMIT(is_spurious_el1_translation_fault(addr, esr, regs),
-	    "Ignoring spurious kernel translation fault at virtual address %016lx\n", addr))
-		return;
+    if (WARN_RATELIMIT(is_spurious_el1_translation_fault(addr, esr, regs),
+        "Ignoring spurious kernel translation fault at virtual address %016lx\n", addr))
+        return;
 
-	if (is_el1_mte_sync_tag_check_fault(esr)) {
-		do_tag_recovery(addr, esr, regs);
+    if (is_el1_mte_sync_tag_check_fault(esr)) {
+        do_tag_recovery(addr, esr, regs);
 
-		return;
-	}
+        return;
+    }
 
-	if (is_el1_permission_fault(addr, esr, regs)) {
-		if (esr & ESR_ELx_WNR) {
-			/* MTK port: auto-fix write-to-readonly */
-			if (set_memory_rw(addr & PAGE_MASK, 1) == 0) {
-				pr_emerg("MTK510: auto-fixed ro write at 0x%lx\n", addr);
-				return;
-			}
-			pr_emerg("XXX: RO write fault at 0x%lx, PC=0x%llx\n", addr, regs->pc);
-			dump_stack();
-			msg = "write to read-only memory";
-		} else if (is_el1_instruction_abort(esr))
-			msg = "execute from non-executable memory";
-		else
-			msg = "read from unreadable memory";
-	} else if (addr < PAGE_SIZE) {
-		msg = "NULL pointer dereference";
-	} else {
-		if (is_translation_fault(esr) &&
-		    kfence_handle_page_fault(addr, esr & ESR_ELx_WNR, regs))
-			return;
+    if (is_el1_permission_fault(addr, esr, regs)) {
+        	if (esr & ESR_ELx_WNR) {
+            	/* MTK port: removed set_memory_rw to avoid nested fault */
+            	pr_emerg("XXX: RO write fault at 0x%lx, PC=0x%llx\n", addr, regs->pc);
+            	dump_stack();
+            	msg = "write to read-only memory MTK510_TEST_RO_WRITE";
+        	} else if (is_el1_instruction_abort(esr))
+            	msg = "execute from non-executable memory";
+        	else
+            	msg = "read from unreadable memory";
+    } else if (addr < PAGE_SIZE) {
+        msg = "NULL pointer dereference";
+    } else {
+        if (is_translation_fault(esr) &&
+            kfence_handle_page_fault(addr, esr & ESR_ELx_WNR, regs))
+            return;
 
-		msg = "paging request";
-	}
+        msg = "paging request";
+    }
 
-	die_kernel_fault(msg, addr, esr, regs);
+    die_kernel_fault(msg, addr, esr, regs);
 }
 
 static void set_thread_esr(unsigned long address, unsigned int esr)

@@ -561,7 +561,8 @@ static void __init map_kernel_segment(pgd_t *pgdp, void *va_start, void *va_end,
 {
 	phys_addr_t pa_start = __pa_symbol(va_start);
 	unsigned long size = va_end - va_start;
-
+	pr_emerg("MTK510: segment %px-%px prot=0x%llx\n",
+         va_start, va_end, pgprot_val(prot));
 	BUG_ON(!PAGE_ALIGNED(pa_start));
 	BUG_ON(!PAGE_ALIGNED(size));
 
@@ -662,47 +663,70 @@ static void __init map_kernel(pgd_t *pgdp)
     pgprot_t text_prot = PAGE_KERNEL_EXEC;
     pgprot_t rodata_prot = PAGE_KERNEL_EXEC;
     pgprot_t inittext_prot = PAGE_KERNEL_EXEC;
-	pr_emerg("XXX: map_kernel text_prot=0x%llx\n", pgprot_val(text_prot));
-    pr_emerg("XXX: map_kernel _text=0x%lx _etext=0x%lx\n", 
-             (unsigned long)_text, (unsigned long)_etext);
+	pr_emerg("MTK510: map_kernel ENTER\n");
+	
+    pr_emerg("MTK510: text_prot=0x%llx\n",
+             pgprot_val(text_prot));
+
+    pr_emerg("MTK510: _text=0x%lx _etext=0x%lx\n",
+             (unsigned long)_text,
+             (unsigned long)_etext);
 
     if (arm64_early_this_cpu_has_bti())
         text_prot = __pgprot_modify(text_prot, PTE_GP, PTE_GP);
 
-    map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
-               VM_NO_GUARD);
-    map_kernel_segment(pgdp, __start_rodata, __inittext_begin, rodata_prot,
-               &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
-    map_kernel_segment(pgdp, __inittext_begin, __inittext_end, inittext_prot,
-               &vmlinux_inittext, 0, VM_NO_GUARD);
-    map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
-               &vmlinux_initdata, 0, VM_NO_GUARD);
-    map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
+    map_kernel_segment(pgdp, _text, _etext,
+                       text_prot, &vmlinux_text,
+                       0, VM_NO_GUARD);
+
+    map_kernel_segment(pgdp, __start_rodata, __inittext_begin,
+                       rodata_prot, &vmlinux_rodata,
+                       NO_CONT_MAPPINGS, VM_NO_GUARD);
+
+    map_kernel_segment(pgdp, __inittext_begin, __inittext_end,
+                       inittext_prot, &vmlinux_inittext,
+                       0, VM_NO_GUARD);
+
+    map_kernel_segment(pgdp, __initdata_begin, __initdata_end,
+                       PAGE_KERNEL, &vmlinux_initdata,
+                       0, VM_NO_GUARD);
+
+    map_kernel_segment(pgdp, _data, _end,
+                       PAGE_KERNEL, &vmlinux_data,
+                       0, 0);
+
+    pr_emerg("MTK510: map_kernel segments mapped\n");
 
     if (!READ_ONCE(pgd_val(*pgd_offset_pgd(pgdp, FIXADDR_START)))) {
         set_pgd(pgd_offset_pgd(pgdp, FIXADDR_START),
-            READ_ONCE(*pgd_offset_k(FIXADDR_START)));
+                READ_ONCE(*pgd_offset_k(FIXADDR_START)));
     } else if (CONFIG_PGTABLE_LEVELS > 3) {
         pgd_t *bm_pgdp;
         p4d_t *bm_p4dp;
         pud_t *bm_pudp;
+
         BUG_ON(!IS_ENABLED(CONFIG_ARM64_16K_PAGES));
+
         bm_pgdp = pgd_offset_pgd(pgdp, FIXADDR_START);
         bm_p4dp = p4d_offset(bm_pgdp, FIXADDR_START);
         bm_pudp = pud_set_fixmap_offset(bm_p4dp, FIXADDR_START);
+
         pud_populate(&init_mm, bm_pudp, lm_alias(bm_pmd));
+
         pud_clear_fixmap();
     } else {
         BUG();
     }
 
     kasan_copy_shadow(pgdp);
+
+    pr_emerg("MTK510: map_kernel EXIT\n");
 }
 
 void __init paging_init(void)
 {
 	pgd_t *pgdp = pgd_set_fixmap(__pa_symbol(swapper_pg_dir));
-
+	pr_emerg("MTK510: paging_init\n");
 	map_kernel(pgdp);
 	map_mem(pgdp);
 

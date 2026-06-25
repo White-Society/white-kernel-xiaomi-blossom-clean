@@ -255,7 +255,8 @@ static inline pte_t pte_mkdevmap(pte_t pte)
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
 	WRITE_ONCE(*ptep, pte);
-
+	if (pte_val(pte) & PTE_RDONLY)
+    pr_emerg("MTK510: RO PTE %016llx\n", pte_val(pte));
 	/*
 	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
 	 * or update_mmu_cache() have the necessary barriers.
