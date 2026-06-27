@@ -14,3 +14,4 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += mt8183-evb.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8183-kukui-krane-sku176.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8516-pumpkin.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += dandelion.dtb
+dtb-$(CONFIG_ARCH_MEDIATEK) += mt6765.dtb
