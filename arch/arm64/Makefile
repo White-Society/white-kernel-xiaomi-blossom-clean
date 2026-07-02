@@ -161,7 +161,20 @@ KBUILD_IMAGE	:= $(boot)/Image.gz
 ifndef KBUILD_MIXED_TREE
 all:	Image.gz
 endif
+# Default target when executing plain make
+boot		:= arch/arm64/boot
+ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
+KBUILD_IMAGE    := $(boot)/$(subst $\",,$(CONFIG_BUILD_ARM64_APPENDED_KERNEL_IMAGE_NAME))
+else
+KBUILD_IMAGE    := $(boot)/Image.gz
+endif
+KBUILD_DTBS	:= dtbs
 
+all:	Image.gz $(KBUILD_DTBS) $(subst $\",,$(CONFIG_BUILD_ARM64_APPENDED_KERNEL_IMAGE_NAME))
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+MTK_PROJECT := $(subst ",,$(CONFIG_ARCH_MTK_PROJECT))
+export MTK_PLATFORM MTK_PROJECT
+-include $(srctree)/scripts/drvgen/drvgen.mk
 
 Image: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
